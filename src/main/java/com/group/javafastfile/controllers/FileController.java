@@ -42,11 +42,4 @@ public class FileController {
     public List<String> listFiles() {
         return fileService.listFiles();
     }
-     @GetMapping("/upload")
-    public ResponseEntity<Resource> getUploadPage() {
-        Resource resource = new ClassPathResource("static/upload.html");
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
-                .body(resource);
-    }
 }
