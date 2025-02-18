@@ -1,154 +1,116 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Formulaire HTMX stylisé</title>
-  <!-- Inclusion de HTMX -->
-  <script src="https://unpkg.com/htmx.org@1.8.5"></script>
-
+  <meta charset="UTF-8">
+  <title>Mes images</title>
   <style>
-    /* Variables CSS pour un style plus facile à maintenir */
-    :root {
-      --primary-color: #4CAF50;       /* Vert Spring-like */
-      --secondary-color: #f9f9f9;     /* Couleur de fond secondaire */
-      --border-radius: 8px;          /* Rayon des bords arrondis */
-      --transition-speed: 0.3s;       /* Vitesse de transition */
-    }
-
-    /* Style de base pour la page */
+    /* Style général */
     body {
-      margin: 0;
-      padding: 0;
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #e3fdfd, #ffffff);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    /* Conteneur principal */
-    .container {
-      width: 100%;
-      max-width: 500px;
-      background-color: #fff;
-      border-radius: var(--border-radius);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      background: #f9f9f9;
+      margin: 0;
       padding: 2rem;
-      animation: fadeIn 0.5s ease;
     }
 
-    /* Animation d'apparition (fade in) */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* Titre */
     h1 {
-      margin-top: 0;
-      margin-bottom: 1.5rem;
       text-align: center;
-      color: var(--primary-color);
-      font-size: 1.8rem;
     }
 
-    /* Formulaire et éléments internes */
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+    /* Galerie en grille avec 5 images par ligne */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+      margin-top: 2rem;
     }
 
-    label {
-      font-weight: 600;
-      margin-bottom: 0.25rem;
-      display: inline-block;
-    }
-
-    input[type="text"],
-    input[type="file"],
-    textarea {
-      width: 100%;
+    /* Carte de chaque image */
+    .image-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: var(--border-radius);
-      font-size: 1rem;
-      outline: none;
-      transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
-    }
-
-    /* Effet focus sur les champs */
-    input[type="text"]:focus,
-    input[type="file"]:focus,
-    textarea:focus {
-      border-color: var(--primary-color);
-      box-shadow: 0 0 4px rgba(76, 175, 80, 0.4);
-    }
-
-    /* Bouton stylisé */
-    button {
-      padding: 0.75rem 1rem;
-      font-size: 1rem;
-      font-weight: bold;
-      color: #fff;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      transition: background-color var(--transition-speed), transform var(--transition-speed);
-    }
-
-    /* Hover sur le bouton */
-    button:hover {
-      background-color: #43a047;
-      transform: translateY(-2px);
-    }
-
-    /* Zone de résultat */
-    #result {
-      margin-top: 1rem;
-      padding: 1rem;
-      background-color: var(--secondary-color);
-      border-radius: var(--border-radius);
-      min-height: 2rem;
-      box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.1);
       text-align: center;
-      transition: all var(--transition-speed);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .image-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .image-card img {
+      width: 100%;
+      max-height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 0.25rem;
+      text-decoration: none;
+      color: #4CAF50;
+      font-weight: bold;
+      border: 1px solid #4CAF50;
+      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+      transition: background-color 0.3s, color 0.3s;
+      font-size: 0.8rem;
+    }
+    .download-link:hover {
+      background-color: #4CAF50;
+      color: #fff;
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>Envoyer un fichier</h1>
+  <h1>Galerie d'Images</h1>
+  <div id="gallery" class="gallery">
+    <!-- Les images seront insérées ici via JavaScript -->
+  </div>
 
-  <!-- Formulaire HTMX -->
-  <form
-      hx-post="http://localhost:8080/api/sendFile"
-      hx-target="#result"
-      hx-swap="innerHTML"
-      method="POST"
-      enctype="multipart/form-data"
-  >
-    <!-- Champ pour téléverser un fichier -->
-    <div>
-      <label for="file">Fichier :</label>
-      <input type="file" id="file" name="file" required />
-    </div>
-    <!-- Bouton de soumission -->
-    <button type="submit">Envoyer</button>
-  </form>
+  <script>
+    // Au chargement de la page, on récupère la liste des fichiers depuis l'API
+    document.addEventListener("DOMContentLoaded", function() {
+      fetch("http://localhost:8080/api/listFiles")
+        .then(response => response.json())
+        .then(data => {
+          const gallery = document.getElementById("gallery");
+          data.forEach(filename => {
+            // Créer un conteneur pour chaque image
+            const card = document.createElement("div");
+            card.className = "image-card";
 
-  <!-- Zone de résultat : le contenu de la réponse du serveur s’affichera ici -->
-  <div id="result"></div>
-</div>
+            // Créer l'élément image
+            const img = document.createElement("img");
+            // L'image est récupérée via l'URL de téléchargement
+            img.src = `http://localhost:8080/api/download/${filename}`;
+            img.alt = filename;
+
+            // Créer le lien de téléchargement
+            const link = document.createElement("a");
+            link.href = `http://localhost:8080/api/download/${filename}`;
+            link.textContent = "Télécharger";
+            link.className = "download-link";
+            // Attribut pour forcer le téléchargement
+            link.setAttribute("download", filename);
+
+            // Ajouter l'image et le lien à la carte
+            card.appendChild(img);
+            card.appendChild(link);
+
+            // Ajouter la carte à la galerie
+            gallery.appendChild(card);
+          });
+        })
+        .catch(error => {
+          console.error("Erreur lors de la récupération des images :", error);
+          document.getElementById("gallery").innerHTML = "<p>Erreur lors de la récupération des images.</p>";
+        });
+    });
+  </script>
 
 </body>
 </html>
