@@ -24,20 +24,6 @@ public class FileController {
 
     @Autowired
     private FileService fileService;
-    private RequestMappingHandlerMapping requestMappingHandlerMapping;
-
-    @GetMapping("/")
-    public ResponseEntity<List<String>> getEndpoints() {
-        return new ResponseEntity<>(
-            requestMappingHandlerMapping
-                .getHandlerMethods()
-                .keySet()
-                .stream()
-                .map(RequestMappingInfo::toString)
-                .collect(Collectors.toList()),
-            HttpStatus.OK
-        );
-    }
 
     @PostMapping("/sendFile")
     public String handleFileUpload(@RequestParam("file") MultipartFile file) {
