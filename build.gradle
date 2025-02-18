@@ -20,6 +20,10 @@ repositories {
 dependencies {
     implementation 'io.github.wimdeblauwe:htmx-spring-boot:4.0.1'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // Ensure RabinFingerprint JAR is included in runtime
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

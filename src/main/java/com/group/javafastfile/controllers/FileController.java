@@ -19,8 +19,9 @@ public class FileController {
 
     @PostMapping("/sendFile")
     public String handleFileUpload(@RequestParam("file") MultipartFile file) {
-        return fileService.storeFile(file);
+        return fileService.chunkAndStoreFile(file);
     }
+
 
     @GetMapping("/download/{filename}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
