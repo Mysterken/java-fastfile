@@ -5,14 +5,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 @RestController
 public class CustomErrorController implements ErrorController {
 
     @RequestMapping("/error")
     @ResponseBody
-    public String handleError(HttpServletRequest request) {
+    public String handleError() {
         return "Error 404 La page que vous recherchez n'existe pas.";
     }
 }
