@@ -14,7 +14,7 @@ import java.util.Map;
 
 @Repository
 public class FileRepository {
-    private static final String CHUNK_DIR = "chunks/";
+    public static final String CHUNK_DIR = "chunks/";
     private static final String FILE_INDEX = "chunks/file_index.json";
 
     public void saveChunk(String hash, byte[] chunk) throws IOException {

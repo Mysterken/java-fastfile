@@ -20,13 +20,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static com.group.javafastfile.repositories.FileRepository.CHUNK_DIR;
+
 @Service
 public class FileService {
 
     private static final int MIN_CHUNK_SIZE = 2048;
     private static final int MAX_CHUNK_SIZE = 8192;
-    private static final String CHUNK_DIR = "chunks/";
-    private static final String FILE_INDEX = "chunks/file_index.json";
     private final Polynomial polynomial = Polynomial.createIrreducible(53);
 
     @Autowired
