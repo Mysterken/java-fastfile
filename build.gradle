@@ -23,9 +23,11 @@ dependencies {
 
     // Ensure RabinFingerprint JAR is included in runtime
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    runtimeOnly 'org.postgresql:postgresql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

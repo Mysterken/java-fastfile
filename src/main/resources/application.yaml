@@ -8,3 +8,16 @@ server:
 spring:
   application:
     name: java-fastfile
+  datasource:
+    url: jdbc:postgresql://localhost:5432/java-fastfile
+    username: user
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update  # Auto-create tables if missing
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    defer-datasource-initialization: true  # Ensure schema.sql runs before Hibernate starts
+  sql:
+    init:
+      mode: always  # Ensures schema.sql is executed on startup
