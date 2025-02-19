@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4FastDecompressor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,6 +22,10 @@ public class FileRepository {
     public static final String CHUNK_DIR = "chunks/";
     private static final String FILE_INDEX = "chunks/file_index.json";
 
+    private final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
+    private final LZ4Compressor compressor = lz4Factory.fastCompressor();
+    private final LZ4FastDecompressor decompressor = lz4Factory.fastDecompressor();
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -27,13 +34,15 @@ public class FileRepository {
         if (!Files.exists(chunkPath.getParent())) {
             Files.createDirectories(chunkPath.getParent());
         }
-        Files.write(chunkPath, chunk);
 
-        // Store fingerprint in database if not already present
+        byte[] compressedChunk = compressor.compress(chunk);
+        Files.write(chunkPath, compressedChunk);
+
         if (!fingerprintExists(hash)) {
-            jdbcTemplate.update("INSERT INTO chunk_fingerprints (fingerprint) VALUES (?)", hash);
+            jdbcTemplate.update("INSERT INTO chunk_fingerprints (fingerprint, original_size) VALUES (?, ?)", hash, chunk.length);
         }
     }
+
 
     public boolean exists(String hash) {
         return Files.exists(Paths.get(CHUNK_DIR, hash));
@@ -62,4 +71,16 @@ public class FileRepository {
                 "SELECT COUNT(*) FROM chunk_fingerprints WHERE fingerprint = ?", Integer.class, fingerprint);
         return count != null && count > 0;
     }
+
+    public byte[] decompressChunk(byte[] compressedData, int originalSize) {
+        return decompressor.decompress(compressedData, originalSize);
+    }
+
+    public int determineOriginalSize(String hash) {
+        return jdbcTemplate.queryForObject(
+                "SELECT original_size FROM chunk_fingerprints WHERE fingerprint = ?",
+                Integer.class, hash
+        );
+    }
+
 }

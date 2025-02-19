@@ -67,9 +67,13 @@ public class FileService {
             Path tempFile = Files.createTempFile("reconstructed_", filename);
 
             for (String hash : chunkHashes) {
-                Path chunkPath = Paths.get(CHUNK_DIR, hash);
-                byte[] chunkData = Files.readAllBytes(chunkPath);
-                Files.write(tempFile, chunkData, java.nio.file.StandardOpenOption.APPEND);
+                Path chunkPath = Paths.get(FileRepository.CHUNK_DIR, hash);
+                byte[] compressedData = Files.readAllBytes(chunkPath);
+
+                int originalSize = fileRepository.determineOriginalSize(hash);
+
+                byte[] decompressedData = fileRepository.decompressChunk(compressedData, originalSize);
+                Files.write(tempFile, decompressedData, java.nio.file.StandardOpenOption.APPEND);
             }
 
             return new UrlResource(tempFile.toUri());
@@ -77,6 +81,7 @@ public class FileService {
             throw new RuntimeException("Failed to reconstruct file: " + filename, e);
         }
     }
+
 
     private List<byte[]> chunkFile(byte[] data) {
         List<byte[]> chunks = new ArrayList<>();
