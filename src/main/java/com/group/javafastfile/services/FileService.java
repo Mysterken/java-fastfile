@@ -1,6 +1,8 @@
 package com.group.javafastfile.services;
 
 import com.group.javafastfile.repositories.FileRepository;
+import org.rabinfingerprint.fingerprint.RabinFingerprintLong;
+import org.rabinfingerprint.polynomial.Polynomial;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -11,58 +13,105 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.Map;
+
+import static com.group.javafastfile.repositories.FileRepository.CHUNK_DIR;
 
 @Service
 public class FileService {
 
-    private static final String UPLOAD_DIR = "uploads/";
+    private static final int MIN_CHUNK_SIZE = 2048;
+    private static final int MAX_CHUNK_SIZE = 8192;
+    private final Polynomial polynomial = Polynomial.createIrreducible(53);
+
     @Autowired
     private FileRepository fileRepository;
 
     public String storeFile(MultipartFile file) {
         try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
+            byte[] data = file.getBytes();
+            List<byte[]> chunks = chunkFile(data);
+            Map<String, List<String>> fileIndex = fileRepository.loadFileIndex();
+            List<String> chunkHashes = new ArrayList<>();
 
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
+            for (byte[] chunk : chunks) {
+                String hash = computeHash(chunk);
+                if (!fileRepository.exists(hash)) {
+                    fileRepository.saveChunk(hash, chunk);
+                }
+                chunkHashes.add(hash);
             }
 
-            Path filePath = uploadPath.resolve(Objects.requireNonNull(file.getOriginalFilename()));
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            fileRepository.save(file.getOriginalFilename());
+            fileIndex.put(file.getOriginalFilename(), chunkHashes);
+            fileRepository.saveFileIndex(fileIndex);
 
-            return "File uploaded successfully: " + file.getOriginalFilename();
+            return "File successfully chunked and stored: " + file.getOriginalFilename();
         } catch (IOException e) {
-            return "Failed to upload file";
+            return "Failed to process file: " + e.getMessage();
         }
     }
 
     public Resource loadFile(String filename) {
         try {
-            Path filePath = Paths.get(UPLOAD_DIR).resolve(filename).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists() || resource.isReadable()) {
-                return resource;
-            } else {
+            Map<String, List<String>> fileIndex = fileRepository.loadFileIndex();
+            if (!fileIndex.containsKey(filename)) {
                 throw new RuntimeException("File not found: " + filename);
             }
-        } catch (Exception e) {
-            throw new RuntimeException("File not found: " + filename, e);
+
+            List<String> chunkHashes = fileIndex.get(filename);
+            Path tempFile = Files.createTempFile("reconstructed_", filename);
+
+            for (String hash : chunkHashes) {
+                Path chunkPath = Paths.get(CHUNK_DIR, hash);
+                byte[] chunkData = Files.readAllBytes(chunkPath);
+                Files.write(tempFile, chunkData, java.nio.file.StandardOpenOption.APPEND);
+            }
+
+            return new UrlResource(tempFile.toUri());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to reconstruct file: " + filename, e);
+        }
+    }
+
+    private List<byte[]> chunkFile(byte[] data) {
+        List<byte[]> chunks = new ArrayList<>();
+        RabinFingerprintLong rabin = new RabinFingerprintLong(polynomial);
+
+        int start = 0;
+        for (int i = 0; i < data.length; i++) {
+            rabin.pushByte(data[i]);
+            if (rabin.getFingerprintLong() % MIN_CHUNK_SIZE == 0 || i - start >= MAX_CHUNK_SIZE) {
+                chunks.add(Arrays.copyOfRange(data, start, i + 1));
+                start = i + 1;
+                rabin.reset();
+            }
+        }
+        if (start < data.length) {
+            chunks.add(Arrays.copyOfRange(data, start, data.length));
+        }
+        return chunks;
+    }
+
+    private String computeHash(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(data);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Hashing algorithm not found", e);
         }
     }
 
     public List<String> listFiles() {
-        try {
-            return Files.list(Paths.get(UPLOAD_DIR))
-                    .map(Path::getFileName)
-                    .map(Path::toString)
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not list files", e);
-        }
+        return new ArrayList<>(fileRepository.loadFileIndex().keySet());
     }
 }
