@@ -22,6 +22,12 @@ public class FileController {
         return fileService.storeFile(file);
     }
 
+    @PostMapping("/sendFileRaw")
+    public String handleRawFileUpload(@RequestParam("file") MultipartFile file) {
+        return fileService.storeFileRaw(file);
+    }
+
+
     @GetMapping("/download/{filename}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
         Resource file = fileService.loadFile(filename);
@@ -34,4 +40,18 @@ public class FileController {
     public List<String> listFiles() {
         return fileService.listFiles();
     }
+
+    @GetMapping("/listFilesRaw")
+    public List<String> listFilesRaw() {
+        return fileService.listFilesRaw();
+    }
+
+    @GetMapping("/downloadRaw/{filename}")
+    public ResponseEntity<Resource> downloadRawFile(@PathVariable String filename) {
+        Resource file = fileService.loadRawFile(filename);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(file);
+    }
+
 }

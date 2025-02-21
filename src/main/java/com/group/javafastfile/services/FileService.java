@@ -15,12 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import static com.group.javafastfile.repositories.FileRepository.CHUNK_DIR;
+import java.util.*;
 
 @Service
 public class FileService {
@@ -119,4 +114,58 @@ public class FileService {
     public List<String> listFiles() {
         return new ArrayList<>(fileRepository.loadFileIndex().keySet());
     }
+
+    public String storeFileRaw(MultipartFile file) {
+        try {
+            byte[] fileData = file.getBytes();
+            byte[] compressedData = fileRepository.compressData(fileData); // Compress with LZ4
+
+            Path uploadPath = Paths.get(FileRepository.UPLOAD_DIR);
+
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            Path filePath = uploadPath.resolve(Objects.requireNonNull(file.getOriginalFilename()));
+            Files.write(filePath, compressedData); // Store compressed file
+
+            fileRepository.save(file.getOriginalFilename(), compressedData.length, fileData.length);
+
+            return "File uploaded successfully (compressed) without chunking: " + file.getOriginalFilename();
+        } catch (IOException e) {
+            return "Failed to upload raw file: " + e.getMessage();
+        }
+    }
+
+    public List<String> listFilesRaw() {
+        return fileRepository.listRawFiles();
+    }
+
+    public Resource loadRawFile(String filename) {
+        try {
+            Path filePath = Paths.get(FileRepository.UPLOAD_DIR).resolve(filename).normalize();
+
+            if (!Files.exists(filePath)) {
+                throw new RuntimeException("File not found: " + filename);
+            }
+
+            // Read compressed file
+            byte[] compressedData = Files.readAllBytes(filePath);
+
+            // Get the original size
+            int originalSize = fileRepository.determineOriginalSizeRaw(filename);
+
+            // Decompress the file using LZ4
+            byte[] decompressedData = fileRepository.decompressData(compressedData, originalSize);
+
+            // Store decompressed content in a temporary file
+            Path tempFile = Files.createTempFile("decompressed_", filename);
+            Files.write(tempFile, decompressedData);
+
+            return new UrlResource(tempFile.toUri());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load raw file: " + filename, e);
+        }
+    }
+
 }

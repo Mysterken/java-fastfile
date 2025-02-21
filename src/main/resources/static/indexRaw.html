@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Mes images</title>
+  <style>
+    /* Style général */
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    /* Galerie en grille avec 5 images par ligne */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+
+    /* Carte de chaque image */
+    .image-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      padding: 0.5rem;
+      text-align: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .image-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .image-card img {
+      width: 100%;
+      max-height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+
+    .download-link {
+      display: inline-block;
+      margin-top: 0.25rem;
+      text-decoration: none;
+      color: #4CAF50;
+      font-weight: bold;
+      border: 1px solid #4CAF50;
+      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+      transition: background-color 0.3s, color 0.3s;
+      font-size: 0.8rem;
+    }
+    .download-link:hover {
+      background-color: #4CAF50;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Galerie d'Images</h1>
+  <div id="gallery" class="gallery">
+    <!-- Les images seront insérées ici via JavaScript -->
+  </div>
+
+  <script>
+    // Au chargement de la page, on récupère la liste des fichiers depuis l'API
+    document.addEventListener("DOMContentLoaded", function() {
+      fetch("http://localhost:8080/api/listFilesRaw")
+        .then(response => response.json())
+        .then(data => {
+          const gallery = document.getElementById("gallery");
+          data.forEach(filename => {
+            // Créer un conteneur pour chaque image
+            const card = document.createElement("div");
+            card.className = "image-card";
+
+            // Créer l'élément image
+            const img = document.createElement("img");
+            // L'image est récupérée via l'URL de téléchargement
+            img.src = `http://localhost:8080/api/downloadRaw/${filename}`;
+            img.alt = filename;
+
+            // Créer le lien de téléchargement
+            const link = document.createElement("a");
+            link.href = `http://localhost:8080/api/downloadRaw/${filename}`;
+            link.textContent = "Télécharger";
+            link.className = "download-link";
+            // Attribut pour forcer le téléchargement
+            link.setAttribute("download", filename);
+
+            // Ajouter l'image et le lien à la carte
+            card.appendChild(img);
+            card.appendChild(link);
+
+            // Ajouter la carte à la galerie
+            gallery.appendChild(card);
+          });
+        })
+        .catch(error => {
+          console.error("Erreur lors de la récupération des images :", error);
+          document.getElementById("gallery").innerHTML = "<p>Erreur lors de la récupération des images.</p>";
+        });
+    });
+  </script>
+
+</body>
+</html>

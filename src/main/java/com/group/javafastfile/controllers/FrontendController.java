@@ -17,4 +17,20 @@ public class FrontendController {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
                 .body(resource);
     }
+
+    @GetMapping("/uploadRaw")
+    public ResponseEntity<Resource> getUploadRawPage() {
+        Resource resource = new ClassPathResource("static/uploadRaw.html");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
+                .body(resource);
+    }
+
+    @GetMapping("/raw")
+    public ResponseEntity<Resource> getRawPage() {
+        Resource resource = new ClassPathResource("static/indexRaw.html");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
+                .body(resource);
+    }
 }
