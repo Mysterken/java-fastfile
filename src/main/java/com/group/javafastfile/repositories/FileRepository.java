@@ -16,11 +16,15 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Repository
 public class FileRepository {
     public static final String CHUNK_DIR = "chunks/";
     private static final String FILE_INDEX = "chunks/file_index.json";
+
+    public static final String UPLOAD_DIR = "uploads/";
+    private static final String FILE_LIST = "uploads/file_list.json";
 
     private final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
     private final LZ4Compressor compressor = lz4Factory.fastCompressor();
@@ -82,5 +86,82 @@ public class FileRepository {
                 Integer.class, hash
         );
     }
+
+    public int determineOriginalSizeRaw(String filename) {
+        try {
+            Path fileIndexPath = Paths.get(FILE_LIST);
+            if (!Files.exists(fileIndexPath)) {
+                throw new RuntimeException("File metadata not found");
+            }
+
+            Map<String, Map<String, Integer>> fileList;
+            try (BufferedReader reader = Files.newBufferedReader(fileIndexPath)) {
+                fileList = new ObjectMapper().readValue(reader, Map.class);
+            }
+
+            if (!fileList.containsKey(filename)) {
+                throw new RuntimeException("Metadata for file not found: " + filename);
+            }
+
+            return fileList.get(filename).get("original_size");
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to retrieve original size for: " + filename, e);
+        }
+    }
+
+
+    /**
+     * Compress data using LZ4 before storing.
+     */
+    public byte[] compressData(byte[] data) {
+        return compressor.compress(data);
+    }
+
+    /**
+     * Decompress LZ4-compressed data.
+     */
+    public byte[] decompressData(byte[] compressedData, int originalSize) {
+        return decompressor.decompress(compressedData, originalSize);
+    }
+
+
+    /**
+     * Save metadata about raw files (compressed size & original size).
+     */
+    public void save(String fileName, int compressedSize, int originalSize) {
+        try {
+            Path fileIndexPath = Paths.get(FILE_LIST);
+            Map<String, Map<String, Integer>> fileList = new HashMap<>();
+
+            if (Files.exists(fileIndexPath)) {
+                try (BufferedReader reader = Files.newBufferedReader(fileIndexPath)) {
+                    fileList = new ObjectMapper().readValue(reader, Map.class);
+                }
+            }
+
+            Map<String, Integer> sizeMap = new HashMap<>();
+            sizeMap.put("compressed_size", compressedSize);
+            sizeMap.put("original_size", originalSize);
+            fileList.put(fileName, sizeMap);
+
+            Files.write(fileIndexPath, new ObjectMapper().writeValueAsBytes(fileList));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to save file metadata: " + fileName, e);
+        }
+    }
+
+    public List<String> listRawFiles() {
+        try {
+            return Files.list(Paths.get(UPLOAD_DIR))
+                    .map(Path::getFileName)
+                    .map(Path::toString)
+                    .filter(filename -> !filename.equals("file_list.json")) // Exclude metadata file
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new RuntimeException("Could not list raw files", e);
+        }
+    }
+
+
 
 }
